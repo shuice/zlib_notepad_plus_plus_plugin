@@ -10,3 +10,8 @@ vs.proj/NppPluginTemplate.opensdf
 vs.proj/NppPluginTemplate.exp
 vs.proj/NppPluginTemplate.lib
 vs.proj/NppPluginTemplate.vcxproj.user
+*.ipch
+*.opendb
+*.db
+*.error
+vs.proj/ZLIBTools.vcxproj.user

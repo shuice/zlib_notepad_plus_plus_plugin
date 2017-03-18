@@ -28,7 +28,7 @@
 //-------------------------------------//
 // Here define your plugin name
 //
-const TCHAR NPP_PLUGIN_NAME[] = TEXT("Zlib(RFC1950)");
+const TCHAR NPP_PLUGIN_NAME[] = TEXT("ZLIB Tools");
 
 //-----------------------------------------------//
 //-- STEP 2. DEFINE YOUR PLUGIN COMMAND NUMBER --//
@@ -70,6 +70,6 @@ bool setCommand(size_t index, TCHAR *cmdName, PFUNCPLUGINCMD pFunc, ShortcutKey 
 //
 // Your plugin command functions
 //
-void Zlib_Decode();
+void ZlibDecode();
 
 #endif //PLUGINDEFINITION_H
