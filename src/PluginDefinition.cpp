@@ -17,13 +17,12 @@
 
 #include "PluginDefinition.h"
 #include "menuCmdID.h"
-#include <string>
 #include "zlib\\zlib.h"
+#include <vector>
 
-#pragma comment(lib, "ZLib.lib")
 using namespace std;
-bool ZlibDecode(string& needReplaceText, string& decoded);
-bool ReadNeedReplaceText(string& needReplaceText, HWND& curScintilla);
+bool ZlibDecode(vector<uint8_t>& needReplaceText, vector<uint8_t>& decoded);
+bool ReadNeedReplaceText(vector<uint8_t>& needReplaceText, HWND& curScintilla);
 
 //
 // The plugin data that Notepad++ needs
@@ -101,19 +100,19 @@ bool setCommand(size_t index, TCHAR *cmdName, PFUNCPLUGINCMD pFunc, ShortcutKey 
 //----------------------------------------------//
 void ZlibDecode()
 {
-	string needReplaceText;
+	vector<uint8_t> needReplaceText;
 	HWND curScintilla = NULL;
 	if (ReadNeedReplaceText(needReplaceText, curScintilla) == false)
 	{
 		return;
 	}
 
-	string decoded;
+	vector<uint8_t> decoded;
 	if (ZlibDecode(needReplaceText, decoded) == false)
 	{
 		return;
 	}
-	::SendMessage(curScintilla, SCI_REPLACESEL, 0, (LPARAM)decoded.c_str());
+	//::SendMessage(curScintilla, SCI_REPLACESEL, 0, (LPARAM)decoded.c_str());
 }
 
 
@@ -132,7 +131,7 @@ bool GetCurrentScintilla(HWND& curScintilla)
 }
 
 
-bool ReadNeedReplaceText(string& needReplaceText, HWND& curScintilla)
+bool ReadNeedReplaceText(vector<uint8_t>& needReplaceText, HWND& curScintilla)
 {
 	if (GetCurrentScintilla(curScintilla) == false)
 	{
@@ -161,14 +160,64 @@ bool ReadNeedReplaceText(string& needReplaceText, HWND& curScintilla)
 		needReplaceText.resize(asciiTextLen);
 	}
 
-	::SendMessage(curScintilla, SCI_GETSELTEXT, 0, (LPARAM)needReplaceText.c_str());
+	::SendMessage(curScintilla, SCI_GETSELTEXT, 0, (LPARAM)(&needReplaceText[0]));
 	return true;
 }
 
 
-bool ZlibDecode(string& needReplaceText, string& decoded)
-{
-	needReplaceText = "";
-	decoded = string("12345");
-	return true;
+bool ZlibDecode(vector<uint8_t>& needReplaceText, vector<uint8_t>& decoded)
+{ 
+	z_stream strm;
+	memset(&strm, 0, sizeof(z_stream));
+	size_t full_length = needReplaceText.size();;
+	size_t half_length = full_length / 2;
+	
+	decoded.resize(full_length + half_length);
+	bool done = false;
+	int status = 0;
+
+	
+	strm.next_in = (Bytef *)(&needReplaceText[0]);
+	strm.avail_in = (unsigned int)needReplaceText.size();
+	strm.total_out = 0;
+	strm.zalloc = Z_NULL;
+	strm.zfree = Z_NULL;
+
+	if (inflateInit2(&strm, (15 + 32)) != Z_OK)
+	{
+		return false;
+	}
+
+	while (done == false)
+	{
+		// Make sure we have enough room and reset the lengths.
+		if (strm.total_out >= decoded.size())
+		{
+			decoded.resize(decoded.size() + half_length);
+		}
+		strm.next_out = (Bytef *)(&decoded[0]) + strm.total_out;
+		strm.avail_out = (unsigned int)(decoded.size() - strm.total_out);
+
+		
+		status = inflate(&strm, Z_SYNC_FLUSH);
+		if (status == Z_STREAM_END)
+		{
+			done = true;
+		}
+		else if (status != Z_OK)
+		{
+			break;
+		}
+	}
+	if (inflateEnd(&strm) != Z_OK)
+	{
+		return false;
+	}
+
+	// Set real length.
+	if (done)
+	{
+		decoded.resize(strm.total_out);
+	}
+	return done;
 }
